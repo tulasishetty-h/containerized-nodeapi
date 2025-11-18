@@ -3,7 +3,8 @@ const app = express();
 app.use(express.json());
 
 app.get('/users', (req, res) => {
-  res.json([{ id: 1, name: 'John' }, { id: 2, name: 'Jane' }]);
+  res.json([{ id: 1, name: 'John' }, { id: 2, name: 'Jane' },{ id: 3, name:"Alex"}
+]);
 });
 
 const PORT = process.env.PORT || 3000;
