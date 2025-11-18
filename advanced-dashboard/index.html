@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Advanced Node API Dashboard</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg: #f4f7fa;
+      --card-bg: white;
+      --text: #222;
+      --accent: #0066ff;
+    }
+    body.dark {
+      --bg: #1e1f22;
+      --card-bg: #2b2d31;
+      --text: #ffffff;
+      --accent: #4c8dff;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 20px;
+      transition: 0.3s;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    .top-controls {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      padding: 10px 16px;
+      font-size: 16px;
+      background: var(--accent);
+      border: none;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+
+    .card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 900px;
+      margin: 20px auto;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+      transition: 0.3s;
+    }
+
+    .status {
+      padding: 8px;
+      margin-top: 10px;
+      border-radius: 5px;
+      font-size: 18px;
+      text-align: center;
+      color: white;
+    }
+
+    .success { background: #28a745; }
+    .fail { background: #dc3545; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: center;
+    }
+
+    #chart-container {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>Advanced API Dashboard</h1>
+
+  <div class="top-controls">
+    <button onclick="fetchData()">Refresh Now</button>
+    <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+  </div>
+
+  <div class="card">
+    <h2>API Status</h2>
+    <div id="status" class="status">Checking...</div>
+  </div>
+
+  <div class="card">
+    <h2>User Data</h2>
+    <table id="userTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td colspan="2">Waiting for data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card" id="chart-container">
+    <h2>Users Chart</h2>
+    <canvas id="userChart"></canvas>
+  </div>
+
+<script>
+
+let chart;
+
+// Your API endpoint
+const API_URL = "http://3.109.153.124/users";
+
+function toggleDarkMode() {
+  document.body.classList.toggle("dark");
+}
+
+async function fetchData() {
+  const statusDiv = document.getElementById("status");
+  const tableBody = document.querySelector("#userTable tbody");
+
+  statusDiv.innerHTML = "Loading...";
+  statusDiv.className = "status";
+
+  try {
+    const res = await fetch(API_URL);
+    const data = await res.json();
+
+    // Status update
+    statusDiv.innerHTML = "API Live ✓";
+    statusDiv.classList.add("success");
+
+    // Table update
+    tableBody.innerHTML = "";
+    data.forEach(user => {
+      let row = `<tr>
+                    <td>${user.id}</td>
+                    <td>${user.name}</td>
+                 </tr>`;
+      tableBody.innerHTML += row;
+    });
+
+    // Chart update
+    updateChart(data);
+
+  } catch (err) {
+    statusDiv.innerHTML = "API Down ✗";
+    statusDiv.classList.add("fail");
+
+    tableBody.innerHTML = `<tr><td colspan="2">Error loading data</td></tr>`;
+  }
+}
+
+function updateChart(data) {
+
+  const ctx = document.getElementById("userChart");
+
+  const labels = data.map(u => `User ${u.id}`);
+  const values = data.map(() => Math.floor(Math.random() * 10) + 1);
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Dummy Score",
+        data: values,
+        backgroundColor: "#007bff"
+      }]
+    }
+  });
+}
+
+// Auto-refresh every 10 seconds
+setInterval(fetchData, 10000);
+
+fetchData();
+
+</script>
+</body>
+</html>
