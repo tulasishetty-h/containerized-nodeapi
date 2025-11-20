@@ -1,213 +1,203 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Advanced Node API Dashboard</title>
-
-  <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
   <style>
-    :root {
-      --bg: #f4f7fa;
-      --card-bg: white;
-      --text: #222;
-      --accent: #0066ff;
-    }
-    body.dark {
-      --bg: #1e1f22;
-      --card-bg: #2b2d31;
-      --text: #ffffff;
-      --accent: #4c8dff;
-    }
-
     body {
-      background: var(--bg);
-      color: var(--text);
       font-family: "Segoe UI", sans-serif;
       margin: 0;
-      padding: 20px;
+      padding: 0;
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      color: white;
       transition: 0.3s;
+    }
+
+    .container {
+      width: 90%;
+      margin: auto;
+      padding: 25px;
     }
 
     h1 {
       text-align: center;
-      margin-bottom: 10px;
+      margin-bottom: 15px;
+      font-size: 32px;
+      text-shadow: 0px 0px 10px rgba(0,0,0,0.5);
     }
 
-    .top-controls {
-      display: flex;
-      justify-content: center;
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-
-    button {
-      padding: 10px 16px;
-      font-size: 16px;
-      background: var(--accent);
-      border: none;
-      color: white;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: 0.3s;
-    }
-
-    button:hover {
-      opacity: 0.85;
-    }
-
-    .card {
-      background: var(--card-bg);
-      padding: 20px;
-      border-radius: 12px;
-      max-width: 900px;
-      margin: 20px auto;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-      transition: 0.3s;
-    }
-
-    .status {
-      padding: 8px;
-      margin-top: 10px;
-      border-radius: 5px;
-      font-size: 18px;
+    .status-box {
       text-align: center;
-      color: white;
+      background: rgba(255,255,255,0.1);
+      padding: 15px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      backdrop-filter: blur(10px);
     }
 
-    .success { background: #28a745; }
-    .fail { background: #dc3545; }
+    .status-live {
+      color: #4ade80;
+      font-weight: bold;
+      animation: glow 1.5s infinite alternate;
+    }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
+    .status-down {
+      color: #ef4444;
+      font-weight: bold;
+    }
+
+    @keyframes glow {
+      from { text-shadow: 0 0 5px #22c55e; }
+      to { text-shadow: 0 0 15px #4ade80; }
+    }
+
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+
+    .user-card {
+      background: rgba(255,255,255,0.1);
+      padding: 20px;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+      transition: 0.2s;
+    }
+
+    .user-card:hover {
+      transform: translateY(-4px);
+      background: rgba(255,255,255,0.15);
+    }
+
+    #refreshBtn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      background: #3b82f6;
+      color: white;
+      cursor: pointer;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+
+    #refreshBtn:hover {
+      background: #2563eb;
+    }
+
+    canvas {
+      margin-top: 30px;
+      background: rgba(255,255,255,0.05);
+      padding: 20px;
+      border-radius: 15px;
+    }
+
+    .toggle {
+      text-align: center;
       margin-top: 15px;
     }
 
-    table, th, td {
-      border: 1px solid #ccc;
-    }
-
-    th, td {
-      padding: 10px;
-      text-align: center;
-    }
-
-    #chart-container {
-      margin-top: 20px;
+    .toggle button {
+      background: white;
+      color: black;
+      padding: 8px 15px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
     }
   </style>
 </head>
 
 <body>
+  <div class="container">
+    <h1>🌐 Live API Monitoring Dashboard</h1>
 
-  <h1>Advanced API Dashboard</h1>
+    <div class="status-box" id="apiStatus">Checking API...</div>
 
-  <div class="top-controls">
-    <button onclick="fetchData()">Refresh Now</button>
-    <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+    <div class="toggle">
+      <button onclick="toggleTheme()">Toggle Dark/Light</button>
+    </div>
+
+    <button id="refreshBtn" onclick="loadUsers()">Refresh Data</button>
+
+    <h2>User List</h2>
+    <div class="card-grid" id="userCards"></div>
+
+    <h2>User Chart</h2>
+    <canvas id="userChart" width="300" height="120"></canvas>
   </div>
 
-  <div class="card">
-    <h2>API Status</h2>
-    <div id="status" class="status">Checking...</div>
-  </div>
+  <script>
+    const apiURL = "/users";
+    let chart;
 
-  <div class="card">
-    <h2>User Data</h2>
-    <table id="userTable">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Name</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr><td colspan="2">Waiting for data...</td></tr>
-      </tbody>
-    </table>
-  </div>
+    function toggleTheme() {
+      document.body.style.background =
+        document.body.style.background.includes("white")
+          ? "linear-gradient(135deg, #0f172a, #1e293b)"
+          : "white";
 
-  <div class="card" id="chart-container">
-    <h2>Users Chart</h2>
-    <canvas id="userChart"></canvas>
-  </div>
-
-<script>
-
-let chart;
-
-// Your API endpoint
-const API_URL = "http://3.109.153.124/users";
-
-function toggleDarkMode() {
-  document.body.classList.toggle("dark");
-}
-
-async function fetchData() {
-  const statusDiv = document.getElementById("status");
-  const tableBody = document.querySelector("#userTable tbody");
-
-  statusDiv.innerHTML = "Loading...";
-  statusDiv.className = "status";
-
-  try {
-    const res = await fetch(API_URL);
-    const data = await res.json();
-
-    // Status update
-    statusDiv.innerHTML = "API Live ✓";
-    statusDiv.classList.add("success");
-
-    // Table update
-    tableBody.innerHTML = "";
-    data.forEach(user => {
-      let row = `<tr>
-                    <td>${user.id}</td>
-                    <td>${user.name}</td>
-                 </tr>`;
-      tableBody.innerHTML += row;
-    });
-
-    // Chart update
-    updateChart(data);
-
-  } catch (err) {
-    statusDiv.innerHTML = "API Down ✗";
-    statusDiv.classList.add("fail");
-
-    tableBody.innerHTML = `<tr><td colspan="2">Error loading data</td></tr>`;
-  }
-}
-
-function updateChart(data) {
-
-  const ctx = document.getElementById("userChart");
-
-  const labels = data.map(u => `User ${u.id}`);
-  const values = data.map(() => Math.floor(Math.random() * 10) + 1);
-
-  if (chart) chart.destroy();
-
-  chart = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: labels,
-      datasets: [{
-        label: "Dummy Score",
-        data: values,
-        backgroundColor: "#007bff"
-      }]
+      document.body.style.color =
+        document.body.style.color === "black" ? "white" : "black";
     }
-  });
-}
 
-// Auto-refresh every 10 seconds
-setInterval(fetchData, 10000);
+    async function checkAPI() {
+      try {
+        let res = await fetch(apiURL);
+        document.getElementById("apiStatus").innerHTML =
+          "<span class='status-live'>🟢 API Live</span>";
+        return true;
+      } catch (e) {
+        document.getElementById("apiStatus").innerHTML =
+          "<span class='status-down'>🔴 API Down</span>";
+        return false;
+      }
+    }
 
-fetchData();
+    async function loadUsers() {
+      const ok = await checkAPI();
+      if (!ok) return;
 
-</script>
+      const res = await fetch(apiURL);
+      const data = await res.json();
+
+      let html = "";
+      data.forEach((u) => {
+        html += `
+        <div class="user-card">
+          <h3>👤 ${u.name}</h3>
+          <p><b>ID:</b> ${u.id}</p>
+        </div>`;
+      });
+
+      document.getElementById("userCards").innerHTML = html;
+
+      updateChart(data);
+    }
+
+    function updateChart(data) {
+      const labels = data.map((u) => u.name);
+      const values = data.map((u) => u.id);
+
+      if (chart) chart.destroy();
+
+      chart = new Chart(document.getElementById("userChart"), {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "User IDs",
+            data: values,
+          }],
+        },
+      });
+    }
+
+    loadUsers();
+  </script>
 </body>
 </html>
+
